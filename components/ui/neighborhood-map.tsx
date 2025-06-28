@@ -35,6 +35,7 @@ export function NeighborhoodMap({
   const [map, setMap] = useState<any>(null)
   const [markers, setMarkers] = useState<any[]>([])
   const [isLoaded, setIsLoaded] = useState(false)
+  const [isMounted, setIsMounted] = useState(false)
   const [selectedNeighborhood, setSelectedNeighborhood] = useState<NeighborhoodData | null>(null)
   const [filterType, setFilterType] = useState<"matchScore" | "rent" | "safety">("matchScore")
   const [heatmapType, setHeatmapType] = useState<"rent" | "safety" | "amenities">("rent")
@@ -42,38 +43,48 @@ export function NeighborhoodMap({
   const [showHeatmap, setShowHeatmap] = useState(showHeatmapProp)
 
   useEffect(() => {
-    // Load Leaflet CSS and JS
-    if (!document.querySelector('link[href*="leaflet"]')) {
-      const link = document.createElement("link")
-      link.rel = "stylesheet"
-      link.href = "https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"
-      document.head.appendChild(link)
-    }
-
-    if (!window.L) {
-      const script = document.createElement("script")
-      script.src = "https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"
-      script.onload = initializeMap
-      document.head.appendChild(script)
-    } else {
-      initializeMap()
-    }
-
-    return () => {
-      if (map) {
-        map.remove()
-      }
-    }
+    setIsMounted(true)
   }, [])
 
   useEffect(() => {
-    if (map && isLoaded) {
+    if (!isMounted) return
+
+    // Load Leaflet CSS and JS
+    const loadLeaflet = async () => {
+      if (typeof window === "undefined") return
+
+      if (!document.querySelector('link[href*="leaflet"]')) {
+        const link = document.createElement("link")
+        link.rel = "stylesheet"
+        link.href = "https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"
+        document.head.appendChild(link)
+      }
+
+      try {
+        const L = (await import("leaflet")).default
+        initializeMap(L)
+      } catch (error) {
+        console.error("Failed to load Leaflet:", error)
+      }
+    }
+
+    loadLeaflet()
+
+    return () => {
+      if (map && typeof map.remove === "function") {
+        map.remove()
+      }
+    }
+  }, [isMounted])
+
+  useEffect(() => {
+    if (map && isLoaded && isMounted) {
       updateMarkers()
     }
-  }, [neighborhoods, filterType, map, isLoaded])
+  }, [neighborhoods, filterType, map, isLoaded, isMounted])
 
-  const initializeMap = () => {
-    if (!mapRef.current || !window.L) return
+  const initializeMap = (L: any) => {
+    if (!mapRef.current || typeof window === "undefined") return
 
     // Calculate center from neighborhoods
     const center =
@@ -84,10 +95,10 @@ export function NeighborhoodMap({
           ]
         : [28.6139, 77.209] // Delhi default
 
-    const mapInstance = window.L.map(mapRef.current).setView(center, 11)
+    const mapInstance = L.map(mapRef.current).setView(center, 11)
 
     // Add tile layer
-    window.L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
+    L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
       attribution: '© <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors',
       maxZoom: 19,
     }).addTo(mapInstance)
@@ -118,9 +129,9 @@ export function NeighborhoodMap({
     return "#6B7280" // Gray
   }
 
-  const getMarkerIcon = (neighborhood: NeighborhoodData) => {
+  const getMarkerIcon = (neighborhood: NeighborhoodData, L: any) => {
     const color = getMarkerColor(neighborhood)
-    return window.L.divIcon({
+    return L.divIcon({
       className: "custom-marker",
       html: `
         <div style="
@@ -145,198 +156,62 @@ export function NeighborhoodMap({
     })
   }
 
-  const generateHeatmapData = (type: "rent" | "safety" | "amenities") => {
-    return neighborhoods.map((neighborhood) => {
-      let intensity: number
-      switch (type) {
-        case "rent":
-          // Normalize rent to 0-1 scale (higher rent = higher intensity)
-          intensity = Math.min(neighborhood.rent / 100000, 1)
-          break
-        case "safety":
-          // Invert safety (lower safety = higher intensity for danger zones)
-          intensity = (10 - neighborhood.safety) / 10
-          break
-        case "amenities":
-          // Combine walkability, schools, and nightlife for amenities score
-          const amenityScore = (neighborhood.walkability + neighborhood.schools + neighborhood.nightlife) / 30
-          intensity = amenityScore
-          break
-        default:
-          intensity = 0.5
-      }
+  const updateMarkers = async () => {
+    if (!map || typeof window === "undefined") return
 
-      return [neighborhood.lat, neighborhood.lng, intensity]
-    })
-  }
+    try {
+      const L = (await import("leaflet")).default
 
-  const updateMarkers = () => {
-    if (!map || !window.L) return
-
-    // Clear existing markers
-    markers.forEach((marker) => map.removeLayer(marker))
-
-    // Add new markers
-    const newMarkers = neighborhoods.map((neighborhood) => {
-      const marker = window.L.marker([neighborhood.lat, neighborhood.lng], {
-        icon: getMarkerIcon(neighborhood),
-      }).addTo(map)
-
-      const popupContent = `
-        <div style="min-width: 200px;">
-          <h3 style="margin: 0 0 8px 0; color: #1f2937; font-weight: bold;">${neighborhood.name}</h3>
-          <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 8px; font-size: 12px;">
-            <div><strong>Match:</strong> ${neighborhood.matchScore}%</div>
-            <div><strong>Rent:</strong> ₹${neighborhood.rent.toLocaleString("en-IN")}</div>
-            <div><strong>Safety:</strong> ${neighborhood.safety}/10</div>
-            <div><strong>Walk:</strong> ${neighborhood.walkability}/10</div>
-            <div><strong>Schools:</strong> ${neighborhood.schools}/10</div>
-            <div><strong>Nightlife:</strong> ${neighborhood.nightlife}/10</div>
-          </div>
-          <button 
-            onclick="window.selectNeighborhood(${neighborhood.id})"
-            style="
-              margin-top: 8px;
-              padding: 4px 8px;
-              background: #3B82F6;
-              color: white;
-              border: none;
-              border-radius: 4px;
-              cursor: pointer;
-              font-size: 12px;
-            "
-          >
-            View Details
-          </button>
-        </div>
-      `
-
-      marker.bindPopup(popupContent)
-
-      marker.on("click", () => {
-        setSelectedNeighborhood(neighborhood)
-        if (onNeighborhoodSelect) {
-          onNeighborhoodSelect(neighborhood)
+      // Clear existing markers
+      markers.forEach((marker) => {
+        if (marker && typeof marker.remove === "function") {
+          map.removeLayer(marker)
         }
       })
 
-      return marker
-    })
+      // Add new markers
+      const newMarkers = neighborhoods.map((neighborhood) => {
+        const marker = L.marker([neighborhood.lat, neighborhood.lng], {
+          icon: getMarkerIcon(neighborhood, L),
+        }).addTo(map)
 
-    setMarkers(newMarkers)
+        const popupContent = `
+          <div style="min-width: 200px;">
+            <h3 style="margin: 0 0 8px 0; color: #1f2937; font-weight: bold;">${neighborhood.name}</h3>
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 8px; font-size: 12px;">
+              <div><strong>Match:</strong> ${neighborhood.matchScore}%</div>
+              <div><strong>Rent:</strong> ₹${neighborhood.rent.toLocaleString("en-IN")}</div>
+              <div><strong>Safety:</strong> ${neighborhood.safety}/10</div>
+              <div><strong>Walk:</strong> ${neighborhood.walkability}/10</div>
+              <div><strong>Schools:</strong> ${neighborhood.schools}/10</div>
+              <div><strong>Nightlife:</strong> ${neighborhood.nightlife}/10</div>
+            </div>
+          </div>
+        `
 
-    // Fit map to show all markers
-    if (newMarkers.length > 0) {
-      const group = new window.L.featureGroup(newMarkers)
-      map.fitBounds(group.getBounds().pad(0.1))
-    }
-  }
+        marker.bindPopup(popupContent)
 
-  const toggleHeatmap = () => {
-    if (!map || !window.L) return
+        marker.on("click", () => {
+          setSelectedNeighborhood(neighborhood)
+          if (onNeighborhoodSelect) {
+            onNeighborhoodSelect(neighborhood)
+          }
+        })
 
-    if (showHeatmap && heatmapLayer) {
-      // Remove existing heatmap
-      map.removeLayer(heatmapLayer)
-      setHeatmapLayer(null)
-      setShowHeatmap(false)
-    } else {
-      // Add heatmap
-      loadHeatmapLayer()
-    }
-  }
+        return marker
+      })
 
-  const loadHeatmapLayer = () => {
-    if (!map || !window.L) return
+      setMarkers(newMarkers)
 
-    // Load heatmap plugin if not already loaded
-    if (!window.L.heatLayer) {
-      const script = document.createElement("script")
-      script.src = "https://unpkg.com/leaflet.heat@0.2.0/dist/leaflet-heat.js"
-      script.onload = () => createHeatmap()
-      document.head.appendChild(script)
-    } else {
-      createHeatmap()
-    }
-  }
-
-  const createHeatmap = () => {
-    if (!map || !window.L.heatLayer) return
-
-    const heatmapData = generateHeatmapData(heatmapType)
-
-    const heatLayer = window.L.heatLayer(heatmapData, {
-      radius: 50,
-      blur: 35,
-      maxZoom: 17,
-      gradient: getHeatmapGradient(heatmapType),
-    }).addTo(map)
-
-    setHeatmapLayer(heatLayer)
-    setShowHeatmap(true)
-  }
-
-  const getHeatmapGradient = (type: "rent" | "safety" | "amenities") => {
-    switch (type) {
-      case "rent":
-        return {
-          0.0: "#00ff00", // Green (low rent)
-          0.3: "#ffff00", // Yellow
-          0.6: "#ff8000", // Orange
-          1.0: "#ff0000", // Red (high rent)
-        }
-      case "safety":
-        return {
-          0.0: "#00ff00", // Green (safe)
-          0.3: "#ffff00", // Yellow
-          0.6: "#ff8000", // Orange
-          1.0: "#ff0000", // Red (dangerous)
-        }
-      case "amenities":
-        return {
-          0.0: "#ff0000", // Red (few amenities)
-          0.3: "#ff8000", // Orange
-          0.6: "#ffff00", // Yellow
-          1.0: "#00ff00", // Green (many amenities)
-        }
-      default:
-        return {}
-    }
-  }
-
-  const changeHeatmapType = (newType: "rent" | "safety" | "amenities") => {
-    setHeatmapType(newType)
-
-    if (showHeatmap && heatmapLayer && map) {
-      // Remove current heatmap
-      map.removeLayer(heatmapLayer)
-
-      // Create new heatmap with new type
-      const heatmapData = generateHeatmapData(newType)
-      const newHeatLayer = window.L.heatLayer(heatmapData, {
-        radius: 50,
-        blur: 35,
-        maxZoom: 17,
-        gradient: getHeatmapGradient(newType),
-      }).addTo(map)
-
-      setHeatmapLayer(newHeatLayer)
-    }
-  }
-
-  // Global function for popup buttons
-  useEffect(() => {
-    window.selectNeighborhood = (id: number) => {
-      const neighborhood = neighborhoods.find((n) => n.id === id)
-      if (neighborhood && onNeighborhoodSelect) {
-        onNeighborhoodSelect(neighborhood)
+      // Fit map to show all markers
+      if (newMarkers.length > 0) {
+        const group = new L.featureGroup(newMarkers)
+        map.fitBounds(group.getBounds().pad(0.1))
       }
+    } catch (error) {
+      console.error("Failed to update markers:", error)
     }
-
-    return () => {
-      delete window.selectNeighborhood
-    }
-  }, [neighborhoods, onNeighborhoodSelect])
+  }
 
   const getFilterIcon = (type: string) => {
     switch (type) {
@@ -349,6 +224,20 @@ export function NeighborhoodMap({
       default:
         return <MapPin className="w-4 h-4" />
     }
+  }
+
+  if (!isMounted) {
+    return (
+      <GlassCard className="overflow-hidden">
+        <div className="p-4 border-b border-white/10">
+          <div className="flex items-center justify-between mb-3">
+            <h3 className="text-lg font-semibold text-white">Neighborhood Map</h3>
+            <span className="text-sm text-white/60">Loading...</span>
+          </div>
+        </div>
+        <div style={{ height }} className="w-full relative bg-white/5 animate-pulse" />
+      </GlassCard>
+    )
   }
 
   return (
@@ -380,7 +269,7 @@ export function NeighborhoodMap({
           <div className="flex items-center justify-between">
             <span className="text-sm text-white/80">Density Heatmap</span>
             <button
-              onClick={toggleHeatmap}
+              onClick={() => setShowHeatmap(!showHeatmap)}
               className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${
                 showHeatmap ? "bg-blue-600" : "bg-gray-600"
               }`}
@@ -400,7 +289,7 @@ export function NeighborhoodMap({
                   key={type}
                   variant={heatmapType === type ? "glass" : "outline"}
                   size="sm"
-                  onClick={() => changeHeatmapType(type as any)}
+                  onClick={() => setHeatmapType(type as any)}
                 >
                   <span className="capitalize">{type}</span>
                 </AnimatedButton>

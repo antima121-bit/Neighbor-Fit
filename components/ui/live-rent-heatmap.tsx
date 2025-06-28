@@ -23,6 +23,7 @@ export function LiveRentHeatmap({
   const [map, setMap] = useState<any>(null)
   const [heatmapLayer, setHeatmapLayer] = useState<any>(null)
   const [isLoaded, setIsLoaded] = useState(false)
+  const [isMounted, setIsMounted] = useState(false)
   const [isLoading, setIsLoading] = useState(false)
   const [properties, setProperties] = useState<PropertyData[]>([])
   const [analytics, setAnalytics] = useState<RentAnalytics | null>(null)
@@ -35,16 +36,24 @@ export function LiveRentHeatmap({
   })
 
   useEffect(() => {
-    loadMap()
+    setIsMounted(true)
   }, [])
 
   useEffect(() => {
-    if (map && isLoaded) {
-      loadLiveData().catch(console.error)
+    if (isMounted) {
+      loadMap()
     }
-  }, [map, isLoaded])
+  }, [isMounted])
 
   useEffect(() => {
+    if (map && isLoaded && isMounted) {
+      loadLiveData().catch(console.error)
+    }
+  }, [map, isLoaded, isMounted])
+
+  useEffect(() => {
+    if (!isMounted) return
+
     let interval: NodeJS.Timeout | null = null
 
     if (autoRefresh && refreshInterval > 0) {
@@ -58,9 +67,11 @@ export function LiveRentHeatmap({
         clearInterval(interval)
       }
     }
-  }, [autoRefresh, refreshInterval])
+  }, [autoRefresh, refreshInterval, isMounted])
 
   const loadMap = async () => {
+    if (typeof window === "undefined") return
+
     // Load Leaflet and heatmap plugin
     if (!document.querySelector('link[href*="leaflet"]')) {
       const link = document.createElement("link")
@@ -69,33 +80,38 @@ export function LiveRentHeatmap({
       document.head.appendChild(link)
     }
 
-    if (!window.L) {
-      const script = document.createElement("script")
-      script.src = "https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"
-      script.onload = () => loadHeatmapPlugin()
-      document.head.appendChild(script)
-    } else {
-      loadHeatmapPlugin()
+    try {
+      const L = (await import("leaflet")).default
+      await loadHeatmapPlugin(L)
+      initializeMap(L)
+    } catch (error) {
+      console.error("Failed to load map:", error)
     }
   }
 
-  const loadHeatmapPlugin = () => {
-    if (!window.L.heatLayer) {
+  const loadHeatmapPlugin = async (L: any) => {
+    if (typeof window === "undefined") return
+
+    return new Promise<void>((resolve) => {
+      if (window.L && window.L.heatLayer) {
+        resolve()
+        return
+      }
+
       const script = document.createElement("script")
       script.src = "https://unpkg.com/leaflet.heat@0.2.0/dist/leaflet-heat.js"
-      script.onload = initializeMap
+      script.onload = () => resolve()
+      script.onerror = () => resolve() // Continue even if heatmap plugin fails
       document.head.appendChild(script)
-    } else {
-      initializeMap()
-    }
+    })
   }
 
-  const initializeMap = () => {
-    if (!mapRef.current || !window.L) return
+  const initializeMap = (L: any) => {
+    if (!mapRef.current || typeof window === "undefined") return
 
-    const mapInstance = window.L.map(mapRef.current).setView([28.6139, 77.209], 10)
+    const mapInstance = L.map(mapRef.current).setView([28.6139, 77.209], 10)
 
-    window.L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
+    L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
       attribution: '© <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors',
       maxZoom: 19,
     }).addTo(mapInstance)
@@ -105,7 +121,7 @@ export function LiveRentHeatmap({
   }
 
   const loadLiveData = async () => {
-    if (!map) return
+    if (!map || typeof window === "undefined") return
 
     setIsLoading(true)
     setError(null)
@@ -138,7 +154,7 @@ export function LiveRentHeatmap({
 
       // Update heatmap
       if (combined && combined.length > 0) {
-        updateHeatmap(combined)
+        await updateHeatmap(combined)
       }
 
       // Fetch analytics for the area
@@ -163,69 +179,81 @@ export function LiveRentHeatmap({
     }
   }
 
-  const updateHeatmap = (propertyData: PropertyData[]) => {
-    if (!map || !window.L.heatLayer) return
+  const updateHeatmap = async (propertyData: PropertyData[]) => {
+    if (!map || typeof window === "undefined") return
 
-    // Remove existing heatmap
-    if (heatmapLayer) {
-      map.removeLayer(heatmapLayer)
+    try {
+      const L = (await import("leaflet")).default
+
+      // Remove existing heatmap
+      if (heatmapLayer) {
+        map.removeLayer(heatmapLayer)
+      }
+
+      // Check if heatmap plugin is available
+      if (!window.L || !window.L.heatLayer) {
+        console.warn("Heatmap plugin not available")
+        return
+      }
+
+      // Create heatmap data points
+      const heatmapData = propertyData.map((property) => {
+        // Normalize rent to 0-1 scale for intensity
+        const maxRent = Math.max(...propertyData.map((p) => p.rent))
+        const minRent = Math.min(...propertyData.map((p) => p.rent))
+        const intensity = (property.rent - minRent) / (maxRent - minRent)
+
+        return [property.lat, property.lng, Math.max(0.1, intensity)]
+      })
+
+      // Create new heatmap layer
+      const newHeatmapLayer = window.L.heatLayer(heatmapData, {
+        radius: 40,
+        blur: 25,
+        maxZoom: 17,
+        gradient: {
+          0.0: "#00ff00", // Green (low rent)
+          0.2: "#80ff00",
+          0.4: "#ffff00", // Yellow
+          0.6: "#ff8000", // Orange
+          0.8: "#ff4000",
+          1.0: "#ff0000", // Red (high rent)
+        },
+      }).addTo(map)
+
+      setHeatmapLayer(newHeatmapLayer)
+
+      // Add property markers
+      propertyData.forEach((property) => {
+        const marker = L.marker([property.lat, property.lng]).addTo(map)
+
+        const popupContent = `
+          <div style="min-width: 250px; font-family: system-ui;">
+            <h3 style="margin: 0 0 8px 0; color: #1f2937; font-weight: bold;">
+              ${property.locality}
+            </h3>
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 8px; font-size: 12px; margin-bottom: 8px;">
+              <div><strong>Rent:</strong> ₹${property.rent.toLocaleString("en-IN")}</div>
+              <div><strong>Type:</strong> ${property.propertyType}</div>
+              <div><strong>Bedrooms:</strong> ${property.bedrooms}BHK</div>
+              <div><strong>Area:</strong> ${property.area} sq ft</div>
+              <div><strong>Furnished:</strong> ${property.furnished}</div>
+              <div><strong>Source:</strong> ${property.source}</div>
+            </div>
+            <div style="font-size: 11px; color: #666; margin-bottom: 8px;">
+              <strong>Amenities:</strong> ${property.amenities.join(", ")}
+            </div>
+            <div style="font-size: 10px; color: #888;">
+              Updated: ${new Date(property.lastUpdated).toLocaleString()}
+            </div>
+          </div>
+        `
+
+        marker.bindPopup(popupContent)
+      })
+    } catch (error) {
+      console.error("Failed to update heatmap:", error)
     }
-
-    // Create heatmap data points
-    const heatmapData = propertyData.map((property) => {
-      // Normalize rent to 0-1 scale for intensity
-      const maxRent = Math.max(...propertyData.map((p) => p.rent))
-      const minRent = Math.min(...propertyData.map((p) => p.rent))
-      const intensity = (property.rent - minRent) / (maxRent - minRent)
-
-      return [property.lat, property.lng, Math.max(0.1, intensity)]
-    })
-
-    // Create new heatmap layer
-    const newHeatmapLayer = window.L.heatLayer(heatmapData, {
-      radius: 40,
-      blur: 25,
-      maxZoom: 17,
-      gradient: {
-        0.0: "#00ff00", // Green (low rent)
-        0.2: "#80ff00",
-        0.4: "#ffff00", // Yellow
-        0.6: "#ff8000", // Orange
-        0.8: "#ff4000",
-        1.0: "#ff0000", // Red (high rent)
-      },
-    }).addTo(map)
-
-    setHeatmapLayer(newHeatmapLayer)
-
-    // Add property markers
-    propertyData.forEach((property) => {
-      const marker = window.L.marker([property.lat, property.lng]).addTo(map)
-
-      const popupContent = `
-        <div style="min-width: 250px; font-family: system-ui;">
-          <h3 style="margin: 0 0 8px 0; color: #1f2937; font-weight: bold;">
-            ${property.locality}
-          </h3>
-          <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 8px; font-size: 12px; margin-bottom: 8px;">
-            <div><strong>Rent:</strong> ₹${property.rent.toLocaleString("en-IN")}</div>
-            <div><strong>Type:</strong> ${property.propertyType}</div>
-            <div><strong>Bedrooms:</strong> ${property.bedrooms}BHK</div>
-            <div><strong>Area:</strong> ${property.area} sq ft</div>
-            <div><strong>Furnished:</strong> ${property.furnished}</div>
-            <div><strong>Source:</strong> ${property.source}</div>
-          </div>
-          <div style="font-size: 11px; color: #666; margin-bottom: 8px;">
-            <strong>Amenities:</strong> ${property.amenities.join(", ")}
-          </div>
-          <div style="font-size: 10px; color: #888;">
-            Updated: ${new Date(property.lastUpdated).toLocaleString()}
-          </div>
-        </div>
-      `
-
-      marker.bindPopup(popupContent)
-    })
   }
 
   const handleRefresh = () => {
@@ -243,6 +271,22 @@ export function LiveRentHeatmap({
       default:
         return "text-white"
     }
+  }
+
+  if (!isMounted) {
+    return (
+      <GlassCard className="overflow-hidden">
+        <div className="p-4 border-b border-white/10">
+          <div className="flex items-center justify-between mb-3">
+            <div className="flex items-center space-x-2">
+              <Database className="w-5 h-5 text-blue-400" />
+              <h3 className="text-lg font-semibold text-white">Live Rent Data</h3>
+            </div>
+          </div>
+        </div>
+        <div style={{ height }} className="w-full relative bg-white/5 animate-pulse" />
+      </GlassCard>
+    )
   }
 
   return (
