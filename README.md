@@ -28,8 +28,7 @@ NeighborFit provides an intelligent, data-driven platform that:
 
 ## 🚀 **Live Demo**
 
-- **Production**: [neighborfit.vercel.app](https://neighborfit.vercel.app)
-- **Development**: [neighborfit-dev.vercel.app](https://neighborfit-dev.vercel.app)
+- **Production**: [neighborfit.vercel.app](https://v0-next-js-commun-git-1a40cd-antimamishra113-gmailcoms-projects.vercel.app)
 
 ## 🛠️ **Technology Stack**
 
