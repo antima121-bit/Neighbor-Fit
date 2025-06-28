@@ -1,6 +1,7 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useEffect } from "react"
+import dynamic from "next/dynamic"
 import { Header } from "@/components/layout/header"
 import { GlassCard } from "@/components/ui/glass-card"
 import { AnimatedButton } from "@/components/ui/animated-button"
@@ -19,7 +20,14 @@ import {
   Settings,
 } from "lucide-react"
 
+// Dynamically import components that use window
+const DynamicSearchInterface = dynamic(() => import("@/components/ui/search-interface"), {
+  ssr: false,
+  loading: () => <div className="h-32 bg-white/5 rounded-lg animate-pulse" />,
+})
+
 export default function ExplorePage() {
+  const [mounted, setMounted] = useState(false)
   const [searchQuery, setSearchQuery] = useState("")
   const [filters, setFilters] = useState({
     budget: [10000, 50000],
@@ -31,6 +39,10 @@ export default function ExplorePage() {
   })
   const [searchMode, setSearchMode] = useState<"text" | "map" | "voice">("text")
   const [isSearching, setIsSearching] = useState(false)
+
+  useEffect(() => {
+    setMounted(true)
+  }, [])
 
   const handleSearch = async () => {
     setIsSearching(true)
@@ -46,7 +58,7 @@ export default function ExplorePage() {
       name: "Cyber City",
       city: "Gurgaon, Haryana",
       matchScore: 94,
-      image: "/placeholder.svg?height=200&width=300",
+      image: "/images/cyber-city.png",
       metrics: {
         walkScore: 89,
         transitScore: 76,
@@ -63,7 +75,7 @@ export default function ExplorePage() {
       name: "Koramangala",
       city: "Bangalore, Karnataka",
       matchScore: 89,
-      image: "/placeholder.svg?height=200&width=300",
+      image: "/images/koramangala.png",
       metrics: {
         walkScore: 76,
         transitScore: 84,
@@ -80,7 +92,7 @@ export default function ExplorePage() {
       name: "Bandra West",
       city: "Mumbai, Maharashtra",
       matchScore: 87,
-      image: "/placeholder.svg?height=200&width=300",
+      image: "/images/bandra-west.png",
       metrics: {
         walkScore: 92,
         transitScore: 88,
@@ -93,6 +105,28 @@ export default function ExplorePage() {
       description: "Premium location with celebrity culture and upscale lifestyle amenities.",
     },
   ]
+
+  if (!mounted) {
+    return (
+      <div className="min-h-screen">
+        <Header />
+        <main className="pt-24 pb-12">
+          <div className="container mx-auto px-4">
+            <div className="text-center mb-12">
+              <h1 className="text-4xl md:text-5xl font-bold mb-4">
+                Explore <span className="gradient-text">Neighborhoods</span>
+              </h1>
+              <p className="text-xl text-white/80 max-w-3xl mx-auto">
+                Discover your perfect neighborhood using our advanced search and filtering system powered by real-time
+                data.
+              </p>
+            </div>
+            <div className="h-96 bg-white/5 rounded-lg animate-pulse" />
+          </div>
+        </main>
+      </div>
+    )
+  }
 
   return (
     <div className="min-h-screen">
@@ -364,9 +398,13 @@ export default function ExplorePage() {
                         {/* Image */}
                         <div className="md:col-span-1">
                           <img
-                            src={neighborhood.image || "/placeholder.svg"}
+                            src={neighborhood.image || "/placeholder.svg?height=200&width=300"}
                             alt={neighborhood.name}
                             className="w-full h-48 object-cover rounded-lg"
+                            onError={(e) => {
+                              const target = e.target as HTMLImageElement
+                              target.src = "/placeholder.svg?height=200&width=300"
+                            }}
                           />
                         </div>
 
