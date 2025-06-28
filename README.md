@@ -127,18 +127,6 @@ NeighborFit/
 └── styles/                      # Global styles
 \`\`\`
 
-## 🎨 Design System
-
-### **Color Palette**
-- **Primary:** Emerald gradient (#10b981 → #059669)
-- **Secondary:** Slate tones for contrast
-- **Accent:** Purple highlights (#8b5cf6)
-- **Background:** Glass morphism with blur effects
-
-### **Typography**
-- **Headings:** Inter font family
-- **Body:** System font stack
-- **Code:** JetBrains Mono
 
 ### **Components**
 - **Glass Cards** - Frosted glass effect with backdrop blur
