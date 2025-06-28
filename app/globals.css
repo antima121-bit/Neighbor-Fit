@@ -244,7 +244,6 @@
   }
 }
 
-/* Skeleton Loading */
 .skeleton-glass {
   background: linear-gradient(
     90deg,
@@ -267,7 +266,6 @@
   }
 }
 
-/* Typewriter Effect */
 .typewriter {
   overflow: hidden;
   border-right: 2px solid rgba(255, 255, 255, 0.7);
@@ -294,7 +292,6 @@
   }
 }
 
-/* Gradient Text */
 .gradient-text {
   background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
   -webkit-background-clip: text;
@@ -309,7 +306,7 @@
   background-clip: text;
 }
 
-/* Scroll Animations */
+
 .scroll-reveal {
   opacity: 0;
   transform: translateY(30px);
@@ -321,7 +318,7 @@
   transform: translateY(0);
 }
 
-/* Responsive Design */
+
 @media (max-width: 768px) {
   .glass-card-primary {
     backdrop-filter: blur(15px);
@@ -334,7 +331,6 @@
   }
 }
 
-/* Ultra-compact navigation for large screens */
 @media (min-width: 1024px) {
   .nav-ultra-compact {
     max-width: 600px;
@@ -342,7 +338,7 @@
   }
 }
 
-/* Medium screen optimizations */
+
 @media (min-width: 768px) and (max-width: 1023px) {
   .nav-medium {
     gap: 2px;
