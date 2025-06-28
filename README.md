@@ -286,19 +286,12 @@ We welcome contributions! Please see our [Contributing Guidelines](CONTRIBUTING.
 
 This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
 
-## 👥 **Team**
-
-- **Lead Developer**: [Your Name]
-- **Research Lead**: [Research Team]
-- **UI/UX Designer**: [Design Team]
-- **Data Scientist**: [Analytics Team]
-
 ## 📞 **Contact**
 
-- **Email**: contact@neighborfit.com
-- **LinkedIn**: [Your LinkedIn]
-- **GitHub**: [Your GitHub]
-- **Website**: [Your Portfolio]
+- **Email**: antimamishra113@gmail.com
+- **LinkedIn**: https://www.linkedin.com/in/antima-mishra-6483ba252/
+- **GitHub**:  https://github.com/antima121-bit
+- **Website**: https://v0-next-js-community-starter-7wxfy2cf9.vercel.app
 
 ## 🙏 **Acknowledgments**
 
