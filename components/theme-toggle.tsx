@@ -1,32 +1,37 @@
 "use client"
 
+import * as React from "react"
 import { Moon, Sun } from "lucide-react"
 import { useTheme } from "next-themes"
-import { useEffect, useState } from "react"
+import { Button } from "@/components/ui/button"
 
 export function ThemeToggle() {
   const { theme, setTheme } = useTheme()
-  const [mounted, setMounted] = useState(false)
+  const [mounted, setMounted] = React.useState(false)
 
-  useEffect(() => {
+  React.useEffect(() => {
     setMounted(true)
   }, [])
 
   if (!mounted) {
-    return <div className="w-9 h-9 rounded-lg bg-white/10 animate-pulse" />
+    return (
+      <Button variant="outline" size="icon" className="bg-white/10 border-white/20 text-white">
+        <div className="h-4 w-4" />
+        <span className="sr-only">Toggle theme</span>
+      </Button>
+    )
   }
 
   return (
-    <button
-      onClick={() => setTheme(theme === "dark" ? "light" : "dark")}
-      className="relative w-9 h-9 rounded-lg bg-white/10 hover:bg-white/20 transition-all duration-300 flex items-center justify-center group active:scale-95"
-      title={`Switch to ${theme === "dark" ? "light" : "dark"} mode`}
+    <Button
+      variant="outline"
+      size="icon"
+      onClick={() => setTheme(theme === "light" ? "dark" : "light")}
+      className="bg-white/10 border-white/20 text-white hover:bg-white/20"
     >
-      <Sun className="h-4 w-4 text-white transition-all duration-300 rotate-0 scale-100 dark:-rotate-90 dark:scale-0" />
-      <Moon className="absolute h-4 w-4 text-white transition-all duration-300 rotate-90 scale-0 dark:rotate-0 dark:scale-100" />
-
-      {/* Glow effect */}
-      <div className="absolute inset-0 rounded-lg bg-gradient-to-r from-blue-400/20 to-purple-400/20 opacity-0 group-hover:opacity-100 transition-opacity duration-300 -z-10 blur-sm"></div>
-    </button>
+      <Sun className="h-4 w-4 rotate-0 scale-100 transition-all dark:-rotate-90 dark:scale-0" />
+      <Moon className="absolute h-4 w-4 rotate-90 scale-0 transition-all dark:rotate-0 dark:scale-100" />
+      <span className="sr-only">Toggle theme</span>
+    </Button>
   )
 }

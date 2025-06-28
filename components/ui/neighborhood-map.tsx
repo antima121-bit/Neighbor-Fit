@@ -47,21 +47,29 @@ export function NeighborhoodMap({
   }, [])
 
   useEffect(() => {
-    if (!isMounted) return
+    if (!isMounted || typeof window === "undefined") return
 
-    // Load Leaflet CSS and JS
     const loadLeaflet = async () => {
-      if (typeof window === "undefined") return
-
-      if (!document.querySelector('link[href*="leaflet"]')) {
-        const link = document.createElement("link")
-        link.rel = "stylesheet"
-        link.href = "https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"
-        document.head.appendChild(link)
-      }
-
       try {
+        // Load Leaflet CSS
+        if (!document.querySelector('link[href*="leaflet"]')) {
+          const link = document.createElement("link")
+          link.rel = "stylesheet"
+          link.href = "https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"
+          document.head.appendChild(link)
+        }
+
+        // Dynamic import of Leaflet
         const L = (await import("leaflet")).default
+
+        // Fix for default markers
+        delete (L.Icon.Default.prototype as any)._getIconUrl
+        L.Icon.Default.mergeOptions({
+          iconRetinaUrl: "https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/images/marker-icon-2x.png",
+          iconUrl: "https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/images/marker-icon.png",
+          shadowUrl: "https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/images/marker-shadow.png",
+        })
+
         initializeMap(L)
       } catch (error) {
         console.error("Failed to load Leaflet:", error)
@@ -72,13 +80,17 @@ export function NeighborhoodMap({
 
     return () => {
       if (map && typeof map.remove === "function") {
-        map.remove()
+        try {
+          map.remove()
+        } catch (error) {
+          console.error("Error removing map:", error)
+        }
       }
     }
   }, [isMounted])
 
   useEffect(() => {
-    if (map && isLoaded && isMounted) {
+    if (map && isLoaded && isMounted && typeof window !== "undefined") {
       updateMarkers()
     }
   }, [neighborhoods, filterType, map, isLoaded, isMounted])
@@ -86,25 +98,29 @@ export function NeighborhoodMap({
   const initializeMap = (L: any) => {
     if (!mapRef.current || typeof window === "undefined") return
 
-    // Calculate center from neighborhoods
-    const center =
-      neighborhoods.length > 0
-        ? [
-            neighborhoods.reduce((sum, n) => sum + n.lat, 0) / neighborhoods.length,
-            neighborhoods.reduce((sum, n) => sum + n.lng, 0) / neighborhoods.length,
-          ]
-        : [28.6139, 77.209] // Delhi default
+    try {
+      // Calculate center from neighborhoods
+      const center =
+        neighborhoods.length > 0
+          ? [
+              neighborhoods.reduce((sum, n) => sum + n.lat, 0) / neighborhoods.length,
+              neighborhoods.reduce((sum, n) => sum + n.lng, 0) / neighborhoods.length,
+            ]
+          : [28.6139, 77.209] // Delhi default
 
-    const mapInstance = L.map(mapRef.current).setView(center, 11)
+      const mapInstance = L.map(mapRef.current).setView(center, 11)
 
-    // Add tile layer
-    L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
-      attribution: '© <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors',
-      maxZoom: 19,
-    }).addTo(mapInstance)
+      // Add tile layer
+      L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
+        attribution: '© <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors',
+        maxZoom: 19,
+      }).addTo(mapInstance)
 
-    setMap(mapInstance)
-    setIsLoaded(true)
+      setMap(mapInstance)
+      setIsLoaded(true)
+    } catch (error) {
+      console.error("Failed to initialize map:", error)
+    }
   }
 
   const getMarkerColor = (neighborhood: NeighborhoodData) => {
@@ -165,48 +181,63 @@ export function NeighborhoodMap({
       // Clear existing markers
       markers.forEach((marker) => {
         if (marker && typeof marker.remove === "function") {
-          map.removeLayer(marker)
+          try {
+            map.removeLayer(marker)
+          } catch (error) {
+            console.error("Error removing marker:", error)
+          }
         }
       })
 
       // Add new markers
-      const newMarkers = neighborhoods.map((neighborhood) => {
-        const marker = L.marker([neighborhood.lat, neighborhood.lng], {
-          icon: getMarkerIcon(neighborhood, L),
-        }).addTo(map)
+      const newMarkers = neighborhoods
+        .map((neighborhood) => {
+          try {
+            const marker = L.marker([neighborhood.lat, neighborhood.lng], {
+              icon: getMarkerIcon(neighborhood, L),
+            }).addTo(map)
 
-        const popupContent = `
-          <div style="min-width: 200px;">
-            <h3 style="margin: 0 0 8px 0; color: #1f2937; font-weight: bold;">${neighborhood.name}</h3>
-            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 8px; font-size: 12px;">
-              <div><strong>Match:</strong> ${neighborhood.matchScore}%</div>
-              <div><strong>Rent:</strong> ₹${neighborhood.rent.toLocaleString("en-IN")}</div>
-              <div><strong>Safety:</strong> ${neighborhood.safety}/10</div>
-              <div><strong>Walk:</strong> ${neighborhood.walkability}/10</div>
-              <div><strong>Schools:</strong> ${neighborhood.schools}/10</div>
-              <div><strong>Nightlife:</strong> ${neighborhood.nightlife}/10</div>
+            const popupContent = `
+            <div style="min-width: 200px;">
+              <h3 style="margin: 0 0 8px 0; color: #1f2937; font-weight: bold;">${neighborhood.name}</h3>
+              <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 8px; font-size: 12px;">
+                <div><strong>Match:</strong> ${neighborhood.matchScore}%</div>
+                <div><strong>Rent:</strong> ₹${neighborhood.rent.toLocaleString("en-IN")}</div>
+                <div><strong>Safety:</strong> ${neighborhood.safety}/10</div>
+                <div><strong>Walk:</strong> ${neighborhood.walkability}/10</div>
+                <div><strong>Schools:</strong> ${neighborhood.schools}/10</div>
+                <div><strong>Nightlife:</strong> ${neighborhood.nightlife}/10</div>
+              </div>
             </div>
-          </div>
-        `
+          `
 
-        marker.bindPopup(popupContent)
+            marker.bindPopup(popupContent)
 
-        marker.on("click", () => {
-          setSelectedNeighborhood(neighborhood)
-          if (onNeighborhoodSelect) {
-            onNeighborhoodSelect(neighborhood)
+            marker.on("click", () => {
+              setSelectedNeighborhood(neighborhood)
+              if (onNeighborhoodSelect) {
+                onNeighborhoodSelect(neighborhood)
+              }
+            })
+
+            return marker
+          } catch (error) {
+            console.error("Error creating marker:", error)
+            return null
           }
         })
-
-        return marker
-      })
+        .filter(Boolean)
 
       setMarkers(newMarkers)
 
       // Fit map to show all markers
       if (newMarkers.length > 0) {
-        const group = new L.featureGroup(newMarkers)
-        map.fitBounds(group.getBounds().pad(0.1))
+        try {
+          const group = new L.featureGroup(newMarkers)
+          map.fitBounds(group.getBounds().pad(0.1))
+        } catch (error) {
+          console.error("Error fitting bounds:", error)
+        }
       }
     } catch (error) {
       console.error("Failed to update markers:", error)

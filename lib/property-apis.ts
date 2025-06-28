@@ -3,22 +3,17 @@
 // Property data API integrations for Indian real estate market
 export interface PropertyData {
   id: string
+  locality: string
   lat: number
   lng: number
   rent: number
-  propertyType: "apartment" | "house" | "pg" | "studio"
+  propertyType: string
   bedrooms: number
   area: number
-  furnished: "furnished" | "semi-furnished" | "unfurnished"
-  locality: string
-  city: string
+  furnished: string
   amenities: string[]
-  lastUpdated: string
   source: string
-  imageUrl?: string
-  description?: string
-  ownerName?: string
-  ownerPhone?: string
+  lastUpdated: string
 }
 
 export interface RentAnalytics {
@@ -30,172 +25,202 @@ export interface RentAnalytics {
   lastUpdated: string
 }
 
+export interface Bounds {
+  north: number
+  south: number
+  east: number
+  west: number
+}
+
+// Mock data generator
+const generateMockProperty = (id: string, bounds: Bounds): PropertyData => {
+  const lat = bounds.south + Math.random() * (bounds.north - bounds.south)
+  const lng = bounds.west + Math.random() * (bounds.east - bounds.west)
+
+  const localities = [
+    "Cyber City",
+    "DLF Phase 1",
+    "DLF Phase 2",
+    "Sector 14",
+    "MG Road",
+    "Koramangala",
+    "Indiranagar",
+    "Whitefield",
+    "Electronic City",
+    "HSR Layout",
+    "Bandra West",
+    "Andheri East",
+    "Powai",
+    "Lower Parel",
+    "Worli",
+  ]
+
+  const propertyTypes = ["Apartment", "Villa", "Studio", "Penthouse"]
+  const furnishedTypes = ["Fully Furnished", "Semi Furnished", "Unfurnished"]
+  const amenitiesList = [
+    "Parking",
+    "Gym",
+    "Swimming Pool",
+    "Security",
+    "Power Backup",
+    "Elevator",
+    "Garden",
+    "Club House",
+    "Children's Play Area",
+    "Wi-Fi",
+  ]
+
+  const bedrooms = Math.floor(Math.random() * 4) + 1
+  const area = 500 + Math.random() * 2000
+  const baseRent = bedrooms * 8000 + area * 15
+  const rent = Math.floor(baseRent + (Math.random() - 0.5) * baseRent * 0.3)
+
+  return {
+    id,
+    locality: localities[Math.floor(Math.random() * localities.length)],
+    lat,
+    lng,
+    rent,
+    propertyType: propertyTypes[Math.floor(Math.random() * propertyTypes.length)],
+    bedrooms,
+    area: Math.floor(area),
+    furnished: furnishedTypes[Math.floor(Math.random() * furnishedTypes.length)],
+    amenities: amenitiesList.slice(0, Math.floor(Math.random() * 5) + 3),
+    source: ["99acres", "magicbricks", "housing"][Math.floor(Math.random() * 3)],
+    lastUpdated: new Date().toISOString(),
+  }
+}
+
 // Mock API responses with realistic Indian property data
 const MOCK_PROPERTY_DATA: PropertyData[] = [
   // Gurgaon Properties
   {
     id: "ggn_001",
+    locality: "Cyber City",
     lat: 28.4595,
     lng: 77.0266,
     rent: 35000,
-    propertyType: "apartment",
+    propertyType: "Apartment",
     bedrooms: 2,
     area: 1200,
-    furnished: "semi-furnished",
-    locality: "Cyber City",
-    city: "Gurgaon",
-    amenities: ["gym", "parking", "security", "metro", "wifi", "power backup"],
-    lastUpdated: "2024-01-15T10:30:00Z",
+    furnished: "Semi Furnished",
+    amenities: ["Parking", "Gym", "Security", "Wi-Fi", "Power Backup"],
     source: "99acres",
-    description: "Modern 2BHK apartment in the heart of Cyber City with excellent connectivity",
-    ownerName: "Rajesh Kumar",
-    ownerPhone: "+91-9876543210",
+    lastUpdated: "2024-01-15T10:30:00Z",
   },
   {
     id: "ggn_002",
+    locality: "DLF Phase 2",
     lat: 28.4692,
     lng: 77.0347,
     rent: 42000,
-    propertyType: "apartment",
+    propertyType: "Apartment",
     bedrooms: 3,
     area: 1500,
-    furnished: "furnished",
-    locality: "DLF Phase 2",
-    city: "Gurgaon",
-    amenities: ["gym", "pool", "parking", "security", "clubhouse", "garden", "kids play area"],
-    lastUpdated: "2024-01-15T09:15:00Z",
+    furnished: "Fully Furnished",
+    amenities: ["Parking", "Swimming Pool", "Security", "Club House", "Garden", "Children's Play Area"],
     source: "magicbricks",
-    description: "Luxury 3BHK fully furnished apartment in premium DLF Phase 2",
-    ownerName: "Priya Sharma",
-    ownerPhone: "+91-9876543211",
+    lastUpdated: "2024-01-15T09:15:00Z",
   },
   {
     id: "ggn_003",
+    locality: "Sector 14",
     lat: 28.4743,
     lng: 77.0513,
     rent: 28000,
-    propertyType: "apartment",
+    propertyType: "Apartment",
     bedrooms: 2,
     area: 1000,
-    furnished: "unfurnished",
-    locality: "Sector 14",
-    city: "Gurgaon",
-    amenities: ["parking", "security", "lift", "water supply"],
-    lastUpdated: "2024-01-15T11:45:00Z",
+    furnished: "Unfurnished",
+    amenities: ["Parking", "Security", "Elevator", "Power Backup"],
     source: "housing",
-    description: "Spacious 2BHK unfurnished apartment in peaceful Sector 14",
-    ownerName: "Amit Singh",
-    ownerPhone: "+91-9876543212",
+    lastUpdated: "2024-01-15T11:45:00Z",
   },
   // Bangalore Properties
   {
     id: "blr_001",
+    locality: "Koramangala",
     lat: 12.9352,
     lng: 77.6245,
     rent: 32000,
-    propertyType: "apartment",
+    propertyType: "Apartment",
     bedrooms: 2,
     area: 1100,
-    furnished: "furnished",
-    locality: "Koramangala 5th Block",
-    city: "Bangalore",
-    amenities: ["gym", "parking", "security", "metro", "cafe", "coworking space"],
-    lastUpdated: "2024-01-15T08:20:00Z",
+    furnished: "Fully Furnished",
+    amenities: ["Parking", "Gym", "Security", "Wi-Fi", "Power Backup"],
     source: "99acres",
-    description: "Tech-friendly 2BHK in vibrant Koramangala with startup ecosystem",
-    ownerName: "Deepak Reddy",
-    ownerPhone: "+91-9876543213",
+    lastUpdated: "2024-01-15T08:20:00Z",
   },
   {
     id: "blr_002",
+    locality: "Indiranagar",
     lat: 12.9719,
     lng: 77.6412,
     rent: 38000,
-    propertyType: "apartment",
+    propertyType: "Apartment",
     bedrooms: 3,
     area: 1400,
-    furnished: "semi-furnished",
-    locality: "Indiranagar",
-    city: "Bangalore",
-    amenities: ["gym", "pool", "parking", "security", "metro", "shopping mall", "restaurants"],
-    lastUpdated: "2024-01-15T07:30:00Z",
+    furnished: "Semi Furnished",
+    amenities: ["Parking", "Swimming Pool", "Security", "Wi-Fi", "Power Backup"],
     source: "magicbricks",
-    description: "Premium 3BHK in upscale Indiranagar with excellent social infrastructure",
-    ownerName: "Kavya Nair",
-    ownerPhone: "+91-9876543214",
+    lastUpdated: "2024-01-15T07:30:00Z",
   },
   {
     id: "blr_003",
+    locality: "Whitefield",
     lat: 12.9698,
     lng: 77.7499,
     rent: 25000,
-    propertyType: "apartment",
+    propertyType: "Apartment",
     bedrooms: 2,
     area: 950,
-    furnished: "unfurnished",
-    locality: "Whitefield",
-    city: "Bangalore",
-    amenities: ["parking", "security", "gym", "bus connectivity", "IT parks nearby"],
-    lastUpdated: "2024-01-15T12:00:00Z",
+    furnished: "Unfurnished",
+    amenities: ["Parking", "Gym", "Security", "Wi-Fi", "Power Backup"],
     source: "housing",
-    description: "Affordable 2BHK in IT corridor Whitefield with great connectivity",
-    ownerName: "Suresh Babu",
-    ownerPhone: "+91-9876543215",
+    lastUpdated: "2024-01-15T12:00:00Z",
   },
   // Mumbai Properties
   {
     id: "mum_001",
+    locality: "Bandra West",
     lat: 19.0596,
     lng: 72.8295,
     rent: 65000,
-    propertyType: "apartment",
+    propertyType: "Apartment",
     bedrooms: 2,
     area: 800,
-    furnished: "furnished",
-    locality: "Bandra West",
-    city: "Mumbai",
-    amenities: ["gym", "pool", "parking", "security", "metro", "sea view", "premium location"],
-    lastUpdated: "2024-01-15T09:45:00Z",
+    furnished: "Fully Furnished",
+    amenities: ["Parking", "Swimming Pool", "Security", "Wi-Fi", "Power Backup"],
     source: "99acres",
-    description: "Luxury 2BHK with sea view in premium Bandra West location",
-    ownerName: "Arjun Malhotra",
-    ownerPhone: "+91-9876543216",
+    lastUpdated: "2024-01-15T09:45:00Z",
   },
   {
     id: "mum_002",
+    locality: "Andheri West",
     lat: 19.1136,
     lng: 72.8697,
     rent: 55000,
-    propertyType: "apartment",
+    propertyType: "Apartment",
     bedrooms: 3,
     area: 1200,
-    furnished: "semi-furnished",
-    locality: "Andheri West",
-    city: "Mumbai",
-    amenities: ["gym", "parking", "security", "metro", "airport connectivity", "malls"],
-    lastUpdated: "2024-01-15T10:15:00Z",
+    furnished: "Semi Furnished",
+    amenities: ["Parking", "Swimming Pool", "Security", "Wi-Fi", "Power Backup"],
     source: "magicbricks",
-    description: "Well-connected 3BHK in Andheri West with airport proximity",
-    ownerName: "Neha Joshi",
-    ownerPhone: "+91-9876543217",
+    lastUpdated: "2024-01-15T10:15:00Z",
   },
   {
     id: "mum_003",
+    locality: "Powai",
     lat: 19.1176,
     lng: 72.906,
     rent: 48000,
-    propertyType: "apartment",
+    propertyType: "Apartment",
     bedrooms: 2,
     area: 1000,
-    furnished: "furnished",
-    locality: "Powai",
-    city: "Mumbai",
-    amenities: ["gym", "pool", "parking", "security", "lake view", "IT parks", "educational institutes"],
-    lastUpdated: "2024-01-15T11:30:00Z",
+    furnished: "Fully Furnished",
+    amenities: ["Parking", "Swimming Pool", "Security", "Wi-Fi", "Power Backup"],
     source: "housing",
-    description: "Scenic 2BHK with lake view in tech hub Powai",
-    ownerName: "Vikram Patel",
-    ownerPhone: "+91-9876543218",
+    lastUpdated: "2024-01-15T11:30:00Z",
   },
 ]
 
@@ -226,12 +251,7 @@ export class PropertyDataAPI {
     return Date.now() - timestamp < this.CACHE_DURATION
   }
 
-  async fetchPropertiesInBounds(bounds: {
-    north: number
-    south: number
-    east: number
-    west: number
-  }): Promise<PropertyData[]> {
+  async fetchPropertiesInBounds(bounds: Bounds): Promise<PropertyData[]> {
     try {
       const cacheKey = this.getCacheKey({ type: "bounds", ...bounds })
       const cached = this.cache.get(cacheKey)
@@ -267,8 +287,8 @@ export class PropertyDataAPI {
     }
   }
 
-  async fetchRentAnalytics(city: string, locality?: string): Promise<RentAnalytics> {
-    const cacheKey = this.getCacheKey({ type: "analytics", city, locality })
+  async fetchRentAnalytics(city: string): Promise<RentAnalytics> {
+    const cacheKey = this.getCacheKey({ type: "analytics", city })
     const cached = this.cache.get(cacheKey)
 
     if (cached && this.isValidCache(cached.timestamp)) {
@@ -277,32 +297,14 @@ export class PropertyDataAPI {
 
     await delay(600 + Math.random() * 300)
 
-    let relevantProperties = MOCK_PROPERTY_DATA.filter((p) => p.city === city)
-    if (locality) {
-      relevantProperties = relevantProperties.filter((p) => p.locality.toLowerCase().includes(locality.toLowerCase()))
-    }
-
-    if (relevantProperties.length === 0) {
-      throw new Error(`No data found for ${locality ? locality + ", " : ""}${city}`)
-    }
-
-    const rents = relevantProperties.map((p) => p.rent)
-    const areas = relevantProperties.map((p) => p.area)
-
-    const averageRent = rents.reduce((sum, rent) => sum + rent, 0) / rents.length
-    const medianRent = rents.sort((a, b) => a - b)[Math.floor(rents.length / 2)]
-    const totalArea = areas.reduce((sum, area) => sum + area, 0)
-    const pricePerSqft = rents.reduce((sum, rent) => sum + rent, 0) / totalArea
-
-    // Simulate trend calculation
-    const trend = (Math.random() - 0.5) * 20 // -10% to +10%
+    const baseRent = city === "Mumbai" ? 45000 : city === "Bangalore" ? 35000 : 30000
 
     const analytics: RentAnalytics = {
-      averageRent: Math.round(averageRent),
-      medianRent: Math.round(medianRent),
-      pricePerSqft: Math.round(pricePerSqft),
-      rentTrend: Math.round(trend * 10) / 10,
-      totalListings: relevantProperties.length,
+      averageRent: Math.floor(baseRent + (Math.random() - 0.5) * baseRent * 0.2),
+      medianRent: Math.floor(baseRent * 0.85 + (Math.random() - 0.5) * baseRent * 0.15),
+      pricePerSqft: Math.floor(25 + Math.random() * 15),
+      rentTrend: Math.floor((Math.random() - 0.5) * 20),
+      totalListings: Math.floor(Math.random() * 500) + 200,
       lastUpdated: new Date().toISOString(),
     }
 
@@ -385,7 +387,7 @@ export class PropertyDataAPI {
     return MOCK_PROPERTY_DATA.filter((p) => p.source === "housing").slice(0, 3)
   }
 
-  async fetchAllSources(bounds: any): Promise<{
+  async fetchAllSources(bounds: Bounds): Promise<{
     combined: PropertyData[]
     sources: {
       "99acres": PropertyData[]

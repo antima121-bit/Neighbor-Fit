@@ -40,19 +40,19 @@ export function LiveRentHeatmap({
   }, [])
 
   useEffect(() => {
-    if (isMounted) {
+    if (isMounted && typeof window !== "undefined") {
       loadMap()
     }
   }, [isMounted])
 
   useEffect(() => {
-    if (map && isLoaded && isMounted) {
+    if (map && isLoaded && isMounted && typeof window !== "undefined") {
       loadLiveData().catch(console.error)
     }
   }, [map, isLoaded, isMounted])
 
   useEffect(() => {
-    if (!isMounted) return
+    if (!isMounted || typeof window === "undefined") return
 
     let interval: NodeJS.Timeout | null = null
 
@@ -72,28 +72,38 @@ export function LiveRentHeatmap({
   const loadMap = async () => {
     if (typeof window === "undefined") return
 
-    // Load Leaflet and heatmap plugin
-    if (!document.querySelector('link[href*="leaflet"]')) {
-      const link = document.createElement("link")
-      link.rel = "stylesheet"
-      link.href = "https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"
-      document.head.appendChild(link)
-    }
-
     try {
+      // Load Leaflet CSS
+      if (!document.querySelector('link[href*="leaflet"]')) {
+        const link = document.createElement("link")
+        link.rel = "stylesheet"
+        link.href = "https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"
+        document.head.appendChild(link)
+      }
+
+      // Dynamic import of Leaflet
       const L = (await import("leaflet")).default
-      await loadHeatmapPlugin(L)
+
+      // Fix for default markers
+      delete (L.Icon.Default.prototype as any)._getIconUrl
+      L.Icon.Default.mergeOptions({
+        iconRetinaUrl: "https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/images/marker-icon-2x.png",
+        iconUrl: "https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/images/marker-icon.png",
+        shadowUrl: "https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/images/marker-shadow.png",
+      })
+
+      await loadHeatmapPlugin()
       initializeMap(L)
     } catch (error) {
       console.error("Failed to load map:", error)
     }
   }
 
-  const loadHeatmapPlugin = async (L: any) => {
+  const loadHeatmapPlugin = async () => {
     if (typeof window === "undefined") return
 
     return new Promise<void>((resolve) => {
-      if (window.L && window.L.heatLayer) {
+      if (typeof window !== "undefined" && (window as any).L && (window as any).L.heatLayer) {
         resolve()
         return
       }
@@ -109,15 +119,19 @@ export function LiveRentHeatmap({
   const initializeMap = (L: any) => {
     if (!mapRef.current || typeof window === "undefined") return
 
-    const mapInstance = L.map(mapRef.current).setView([28.6139, 77.209], 10)
+    try {
+      const mapInstance = L.map(mapRef.current).setView([28.6139, 77.209], 10)
 
-    L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
-      attribution: '© <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors',
-      maxZoom: 19,
-    }).addTo(mapInstance)
+      L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
+        attribution: '© <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors',
+        maxZoom: 19,
+      }).addTo(mapInstance)
 
-    setMap(mapInstance)
-    setIsLoaded(true)
+      setMap(mapInstance)
+      setIsLoaded(true)
+    } catch (error) {
+      console.error("Failed to initialize map:", error)
+    }
   }
 
   const loadLiveData = async () => {
@@ -187,11 +201,15 @@ export function LiveRentHeatmap({
 
       // Remove existing heatmap
       if (heatmapLayer) {
-        map.removeLayer(heatmapLayer)
+        try {
+          map.removeLayer(heatmapLayer)
+        } catch (error) {
+          console.error("Error removing heatmap layer:", error)
+        }
       }
 
       // Check if heatmap plugin is available
-      if (!window.L || !window.L.heatLayer) {
+      if (typeof window === "undefined" || !(window as any).L || !(window as any).L.heatLayer) {
         console.warn("Heatmap plugin not available")
         return
       }
@@ -207,7 +225,7 @@ export function LiveRentHeatmap({
       })
 
       // Create new heatmap layer
-      const newHeatmapLayer = window.L.heatLayer(heatmapData, {
+      const newHeatmapLayer = (window as any).L.heatLayer(heatmapData, {
         radius: 40,
         blur: 25,
         maxZoom: 17,
@@ -225,31 +243,35 @@ export function LiveRentHeatmap({
 
       // Add property markers
       propertyData.forEach((property) => {
-        const marker = L.marker([property.lat, property.lng]).addTo(map)
+        try {
+          const marker = L.marker([property.lat, property.lng]).addTo(map)
 
-        const popupContent = `
-          <div style="min-width: 250px; font-family: system-ui;">
-            <h3 style="margin: 0 0 8px 0; color: #1f2937; font-weight: bold;">
-              ${property.locality}
-            </h3>
-            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 8px; font-size: 12px; margin-bottom: 8px;">
-              <div><strong>Rent:</strong> ₹${property.rent.toLocaleString("en-IN")}</div>
-              <div><strong>Type:</strong> ${property.propertyType}</div>
-              <div><strong>Bedrooms:</strong> ${property.bedrooms}BHK</div>
-              <div><strong>Area:</strong> ${property.area} sq ft</div>
-              <div><strong>Furnished:</strong> ${property.furnished}</div>
-              <div><strong>Source:</strong> ${property.source}</div>
+          const popupContent = `
+            <div style="min-width: 250px; font-family: system-ui;">
+              <h3 style="margin: 0 0 8px 0; color: #1f2937; font-weight: bold;">
+                ${property.locality}
+              </h3>
+              <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 8px; font-size: 12px; margin-bottom: 8px;">
+                <div><strong>Rent:</strong> ₹${property.rent.toLocaleString("en-IN")}</div>
+                <div><strong>Type:</strong> ${property.propertyType}</div>
+                <div><strong>Bedrooms:</strong> ${property.bedrooms}BHK</div>
+                <div><strong>Area:</strong> ${property.area} sq ft</div>
+                <div><strong>Furnished:</strong> ${property.furnished}</div>
+                <div><strong>Source:</strong> ${property.source}</div>
+              </div>
+              <div style="font-size: 11px; color: #666; margin-bottom: 8px;">
+                <strong>Amenities:</strong> ${property.amenities.join(", ")}
+              </div>
+              <div style="font-size: 10px; color: #888;">
+                Updated: ${new Date(property.lastUpdated).toLocaleString()}
+              </div>
             </div>
-            <div style="font-size: 11px; color: #666; margin-bottom: 8px;">
-              <strong>Amenities:</strong> ${property.amenities.join(", ")}
-            </div>
-            <div style="font-size: 10px; color: #888;">
-              Updated: ${new Date(property.lastUpdated).toLocaleString()}
-            </div>
-          </div>
-        `
+          `
 
-        marker.bindPopup(popupContent)
+          marker.bindPopup(popupContent)
+        } catch (error) {
+          console.error("Error creating marker:", error)
+        }
       })
     } catch (error) {
       console.error("Failed to update heatmap:", error)
