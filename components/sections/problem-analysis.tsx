@@ -13,7 +13,6 @@ export function ProblemAnalysisSection() {
   })
 
   useEffect(() => {
-    // Animate numbers on load
     const timer = setTimeout(() => {
       setStats({
         regretRate: 78,
@@ -85,7 +84,7 @@ export function ProblemAnalysisSection() {
           ))}
         </div>
 
-        {/* Research Insights */}
+ 
         <GlassCard className="p-8">
           <div className="grid md:grid-cols-2 gap-8 items-center">
             <div>
