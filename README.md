@@ -153,48 +153,6 @@ git clone https://github.com/yourusername/neighborfit.git
 cd neighborfit
 \`\`\`
 
-2. **Install dependencies**
-\`\`\`bash
-npm install
-# or
-yarn install
-# or
-pnpm install
-\`\`\`
-
-3. **Environment Setup**
-\`\`\`bash
-cp .env.example .env.local
-\`\`\`
-
-4. **Run development server**
-\`\`\`bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-\`\`\`
-
-5. **Open in browser**
-\`\`\`
-http://localhost:3000
-\`\`\`
-
-### **Build for Production**
-\`\`\`bash
-npm run build
-npm start
-\`\`\`
-
-## 🔧 **Configuration**
-
-### **Environment Variables**
-\`\`\`env
-# Optional: For enhanced features
-NEXT_PUBLIC_ANALYTICS_ID=your_analytics_id
-NEXT_PUBLIC_SENTRY_DSN=your_sentry_dsn
-\`\`\`
 
 ### **API Configuration**
 The application uses free, public APIs:
