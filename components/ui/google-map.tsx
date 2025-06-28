@@ -5,13 +5,6 @@ import { GlassCard } from "@/components/ui/glass-card"
 import { AnimatedButton } from "@/components/ui/animated-button"
 import { MapPin, Search, Navigation } from "lucide-react"
 
-declare global {
-  interface Window {
-    google: any
-    initMap: () => void
-  }
-}
-
 interface GoogleMapProps {
   onLocationSelect?: (location: { lat: number; lng: number; address: string }) => void
   initialLocation?: { lat: number; lng: number }
@@ -28,217 +21,77 @@ export function GoogleMap({
   const mapRef = useRef<HTMLDivElement>(null)
   const [map, setMap] = useState<any>(null)
   const [marker, setMarker] = useState<any>(null)
-  const [searchBox, setSearchBox] = useState<any>(null)
   const [isLoaded, setIsLoaded] = useState(false)
   const [selectedLocation, setSelectedLocation] = useState<string>("")
-  const searchInputRef = useRef<HTMLInputElement>(null)
+  const [searchQuery, setSearchQuery] = useState("")
 
   useEffect(() => {
-    // Load Google Maps API
-    if (!window.google) {
-      const script = document.createElement("script")
-      script.src = `https://maps.googleapis.com/maps/api/js?key=${process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY}&libraries=places&callback=initMap`
-      script.async = true
-      script.defer = true
+    // Load Leaflet dynamically
+    const loadLeaflet = async () => {
+      if (typeof window !== "undefined") {
+        const L = (await import("leaflet")).default
 
-      window.initMap = initializeMap
-      document.head.appendChild(script)
-    } else {
-      initializeMap()
-    }
+        // Load CSS
+        const link = document.createElement("link")
+        link.rel = "stylesheet"
+        link.href = "https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"
+        document.head.appendChild(link)
 
-    return () => {
-      if (window.initMap) {
-        delete window.initMap
+        initializeMap(L)
       }
     }
+
+    loadLeaflet()
   }, [])
 
-  const initializeMap = () => {
-    if (!mapRef.current || !window.google) return
+  const initializeMap = (L: any) => {
+    if (!mapRef.current) return
 
-    const mapInstance = new window.google.maps.Map(mapRef.current, {
-      center: initialLocation,
-      zoom: 12,
-      styles: [
-        {
-          featureType: "all",
-          elementType: "geometry.fill",
-          stylers: [{ weight: "2.00" }],
-        },
-        {
-          featureType: "all",
-          elementType: "geometry.stroke",
-          stylers: [{ color: "#9c9c9c" }],
-        },
-        {
-          featureType: "all",
-          elementType: "labels.text",
-          stylers: [{ visibility: "on" }],
-        },
-        {
-          featureType: "landscape",
-          elementType: "all",
-          stylers: [{ color: "#f2f2f2" }],
-        },
-        {
-          featureType: "landscape",
-          elementType: "geometry.fill",
-          stylers: [{ color: "#ffffff" }],
-        },
-        {
-          featureType: "landscape.man_made",
-          elementType: "geometry.fill",
-          stylers: [{ color: "#ffffff" }],
-        },
-        {
-          featureType: "poi",
-          elementType: "all",
-          stylers: [{ visibility: "off" }],
-        },
-        {
-          featureType: "road",
-          elementType: "all",
-          stylers: [{ saturation: -100 }, { lightness: 45 }],
-        },
-        {
-          featureType: "road",
-          elementType: "geometry.fill",
-          stylers: [{ color: "#eeeeee" }],
-        },
-        {
-          featureType: "road",
-          elementType: "labels.text.fill",
-          stylers: [{ color: "#7b7b7b" }],
-        },
-        {
-          featureType: "road",
-          elementType: "labels.text.stroke",
-          stylers: [{ color: "#ffffff" }],
-        },
-        {
-          featureType: "road.highway",
-          elementType: "all",
-          stylers: [{ visibility: "simplified" }],
-        },
-        {
-          featureType: "road.arterial",
-          elementType: "labels.icon",
-          stylers: [{ visibility: "off" }],
-        },
-        {
-          featureType: "transit",
-          elementType: "all",
-          stylers: [{ visibility: "off" }],
-        },
-        {
-          featureType: "water",
-          elementType: "all",
-          stylers: [{ color: "#46bcec" }, { visibility: "on" }],
-        },
-        {
-          featureType: "water",
-          elementType: "geometry.fill",
-          stylers: [{ color: "#c8d7d4" }],
-        },
-        {
-          featureType: "water",
-          elementType: "labels.text.fill",
-          stylers: [{ color: "#070707" }],
-        },
-        {
-          featureType: "water",
-          elementType: "labels.text.stroke",
-          stylers: [{ color: "#ffffff" }],
-        },
-      ],
+    // Create map
+    const mapInstance = L.map(mapRef.current).setView([initialLocation.lat, initialLocation.lng], 12)
+
+    // Add tile layer (OpenStreetMap - free)
+    L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
+      attribution: "© OpenStreetMap contributors",
+    }).addTo(mapInstance)
+
+    // Create custom marker icon
+    const customIcon = L.divIcon({
+      className: "custom-marker",
+      html: '<div style="background: #3b82f6; width: 20px; height: 20px; border-radius: 50%; border: 2px solid white; box-shadow: 0 2px 4px rgba(0,0,0,0.3);"></div>',
+      iconSize: [20, 20],
+      iconAnchor: [10, 10],
     })
 
-    const markerInstance = new window.google.maps.Marker({
-      position: initialLocation,
-      map: mapInstance,
+    // Add marker
+    const markerInstance = L.marker([initialLocation.lat, initialLocation.lng], {
+      icon: customIcon,
       draggable: true,
-      title: "Selected Location",
+    }).addTo(mapInstance)
+
+    // Handle map click
+    mapInstance.on("click", async (e: any) => {
+      const { lat, lng } = e.latlng
+      markerInstance.setLatLng([lat, lng])
+
+      const address = await reverseGeocode(lat, lng)
+      setSelectedLocation(address)
+
+      if (onLocationSelect) {
+        onLocationSelect({ lat, lng, address })
+      }
     })
 
-    // Initialize SearchBox if search is enabled
-    if (searchEnabled && searchInputRef.current) {
-      const searchBoxInstance = new window.google.maps.places.SearchBox(searchInputRef.current)
+    // Handle marker drag
+    markerInstance.on("dragend", async (e: any) => {
+      const { lat, lng } = e.target.getLatLng()
 
-      // Bias the SearchBox results towards current map's viewport
-      mapInstance.addListener("bounds_changed", () => {
-        searchBoxInstance.setBounds(mapInstance.getBounds())
-      })
+      const address = await reverseGeocode(lat, lng)
+      setSelectedLocation(address)
 
-      searchBoxInstance.addListener("places_changed", () => {
-        const places = searchBoxInstance.getPlaces()
-        if (places.length === 0) return
-
-        const place = places[0]
-        if (!place.geometry || !place.geometry.location) return
-
-        const location = {
-          lat: place.geometry.location.lat(),
-          lng: place.geometry.location.lng(),
-          address: place.formatted_address || place.name || "",
-        }
-
-        markerInstance.setPosition(location)
-        mapInstance.setCenter(location)
-        setSelectedLocation(location.address)
-
-        if (onLocationSelect) {
-          onLocationSelect(location)
-        }
-      })
-
-      setSearchBox(searchBoxInstance)
-    }
-
-    // Add click listener to map
-    mapInstance.addListener("click", (event: any) => {
-      const location = {
-        lat: event.latLng.lat(),
-        lng: event.latLng.lng(),
-        address: "",
+      if (onLocationSelect) {
+        onLocationSelect({ lat, lng, address })
       }
-
-      markerInstance.setPosition(location)
-
-      // Reverse geocoding to get address
-      const geocoder = new window.google.maps.Geocoder()
-      geocoder.geocode({ location: event.latLng }, (results: any, status: any) => {
-        if (status === "OK" && results[0]) {
-          location.address = results[0].formatted_address
-          setSelectedLocation(location.address)
-        }
-
-        if (onLocationSelect) {
-          onLocationSelect(location)
-        }
-      })
-    })
-
-    // Add drag listener to marker
-    markerInstance.addListener("dragend", (event: any) => {
-      const location = {
-        lat: event.latLng.lat(),
-        lng: event.latLng.lng(),
-        address: "",
-      }
-
-      // Reverse geocoding
-      const geocoder = new window.google.maps.Geocoder()
-      geocoder.geocode({ location: event.latLng }, (results: any, status: any) => {
-        if (status === "OK" && results[0]) {
-          location.address = results[0].formatted_address
-          setSelectedLocation(location.address)
-        }
-
-        if (onLocationSelect) {
-          onLocationSelect(location)
-        }
-      })
     })
 
     setMap(mapInstance)
@@ -246,32 +99,60 @@ export function GoogleMap({
     setIsLoaded(true)
   }
 
+  const reverseGeocode = async (lat: number, lng: number): Promise<string> => {
+    try {
+      const response = await fetch(
+        `https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lng}&addressdetails=1`,
+      )
+      const data = await response.json()
+      return data.display_name || `${lat.toFixed(4)}, ${lng.toFixed(4)}`
+    } catch (error) {
+      return `${lat.toFixed(4)}, ${lng.toFixed(4)}`
+    }
+  }
+
+  const searchLocation = async () => {
+    if (!searchQuery.trim() || !map) return
+
+    try {
+      const response = await fetch(
+        `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(searchQuery + ", India")}&limit=1`,
+      )
+      const data = await response.json()
+
+      if (data.length > 0) {
+        const { lat, lon, display_name } = data[0]
+        const location = { lat: Number.parseFloat(lat), lng: Number.parseFloat(lon), address: display_name }
+
+        map.setView([location.lat, location.lng], 14)
+        marker.setLatLng([location.lat, location.lng])
+        setSelectedLocation(location.address)
+
+        if (onLocationSelect) {
+          onLocationSelect(location)
+        }
+      }
+    } catch (error) {
+      console.error("Search failed:", error)
+    }
+  }
+
   const getCurrentLocation = () => {
-    if (navigator.geolocation) {
+    if (navigator.geolocation && map && marker) {
       navigator.geolocation.getCurrentPosition(
-        (position) => {
-          const location = {
-            lat: position.coords.latitude,
-            lng: position.coords.longitude,
-            address: "",
-          }
+        async (position) => {
+          const { latitude, longitude } = position.coords
+          const location = { lat: latitude, lng: longitude, address: "" }
 
-          if (map && marker) {
-            map.setCenter(location)
-            marker.setPosition(location)
+          map.setView([latitude, longitude], 14)
+          marker.setLatLng([latitude, longitude])
 
-            // Reverse geocoding
-            const geocoder = new window.google.maps.Geocoder()
-            geocoder.geocode({ location }, (results: any, status: any) => {
-              if (status === "OK" && results[0]) {
-                location.address = results[0].formatted_address
-                setSelectedLocation(location.address)
-              }
+          const address = await reverseGeocode(latitude, longitude)
+          location.address = address
+          setSelectedLocation(address)
 
-              if (onLocationSelect) {
-                onLocationSelect(location)
-              }
-            })
+          if (onLocationSelect) {
+            onLocationSelect(location)
           }
         },
         (error) => {
@@ -288,12 +169,16 @@ export function GoogleMap({
           <div className="flex space-x-2">
             <div className="flex-1 relative">
               <input
-                ref={searchInputRef}
                 type="text"
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                onKeyPress={(e) => e.key === "Enter" && searchLocation()}
                 placeholder="Search for places in India..."
                 className="glass-input w-full pr-10"
               />
-              <Search className="absolute right-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-white/60" />
+              <button onClick={searchLocation} className="absolute right-3 top-1/2 transform -translate-y-1/2">
+                <Search className="w-4 h-4 text-white/60 hover:text-white/80" />
+              </button>
             </div>
             <AnimatedButton variant="outline" size="sm" onClick={getCurrentLocation}>
               <Navigation className="w-4 h-4" />
@@ -315,6 +200,13 @@ export function GoogleMap({
           <div className="text-white/80">Loading map...</div>
         </div>
       )}
+
+      <style jsx>{`
+        .custom-marker {
+          background: transparent !important;
+          border: none !important;
+        }
+      `}</style>
     </GlassCard>
   )
 }
