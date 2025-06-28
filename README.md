@@ -91,25 +91,6 @@ NeighborFit provides an intelligent, data-driven platform that:
 
 ## 🏗️ **Architecture**
 
-### **Project Structure**
-\`\`\`
-neighborfit/
-├── app/                    # Next.js App Router
-│   ├── explore/           # Neighborhood exploration
-│   ├── map/               # Interactive mapping
-│   ├── heatmap/           # Data visualization
-│   ├── live-data/         # Real-time analytics
-│   └── profile/           # User management
-├── components/            # Reusable UI components
-│   ├── ui/                # Base UI components
-│   ├── sections/          # Page sections
-│   └── layout/            # Layout components
-├── lib/                   # Utility functions
-│   ├── property-apis.ts   # Data fetching logic
-│   └── utils.ts           # Helper functions
-└── public/                # Static assets
-\`\`\`
-
 ### **Data Flow**
 1. **User Input** → Preference collection and validation
 2. **Data Fetching** → Multi-source API aggregation
