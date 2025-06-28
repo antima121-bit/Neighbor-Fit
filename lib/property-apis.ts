@@ -1,6 +1,6 @@
 "use client"
 
-// Property data API integrations for Indian real estate market
+
 export interface PropertyData {
   id: string
   locality: string
@@ -91,7 +91,7 @@ const generateMockProperty = (id: string, bounds: Bounds): PropertyData => {
   }
 }
 
-// Mock API responses with realistic Indian property data
+
 const MOCK_PROPERTY_DATA: PropertyData[] = [
   // Gurgaon Properties
   {
@@ -224,7 +224,7 @@ const MOCK_PROPERTY_DATA: PropertyData[] = [
   },
 ]
 
-// Simulate API delay and realistic responses
+
 const delay = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms))
 
 export class PropertyDataAPI {
@@ -272,7 +272,6 @@ export class PropertyDataAPI {
           property.lng <= bounds.east,
       )
 
-      // Add some randomization to simulate live data
       const liveProperties = properties.map((property) => ({
         ...property,
         rent: property.rent + Math.floor((Math.random() - 0.5) * property.rent * 0.1), // ±10% variation
@@ -371,7 +370,6 @@ export class PropertyDataAPI {
     return liveResults
   }
 
-  // Simulate real estate aggregator APIs
   async fetch99AcresData(bounds: any): Promise<PropertyData[]> {
     await delay(1000)
     return MOCK_PROPERTY_DATA.filter((p) => p.source === "99acres").slice(0, 3)
@@ -423,5 +421,5 @@ export class PropertyDataAPI {
   }
 }
 
-// Export singleton instance
+
 export const propertyAPI = PropertyDataAPI.getInstance()
