@@ -53,7 +53,7 @@ export function Header() {
             <span className="text-xl font-bold text-white">PropertyAI</span>
           </Link>
 
-          {/* Desktop Navigation */}
+       
           <nav className="hidden md:flex items-center space-x-1">
             {navigation.map((item) => {
               const Icon = item.icon
@@ -73,11 +73,10 @@ export function Header() {
             })}
           </nav>
 
-          {/* Right Side */}
+        
           <div className="flex items-center space-x-4">
             <ThemeToggle />
 
-            {/* Mobile Menu Button */}
             <button
               className="md:hidden text-white hover:text-white/80 transition-colors"
               onClick={() => setIsMenuOpen(!isMenuOpen)}
@@ -87,7 +86,6 @@ export function Header() {
           </div>
         </div>
 
-        {/* Mobile Navigation */}
         {isMenuOpen && (
           <div className="md:hidden border-t border-white/10 bg-black/40 backdrop-blur-md">
             <nav className="py-4 space-y-2">
