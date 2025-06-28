@@ -30,7 +30,6 @@ export function HeroSection() {
             isVisible ? "opacity-100 translate-y-0" : "opacity-0 translate-y-10"
           }`}
         >
-          {/* Main Heading */}
           <div className="mb-8">
             <h1 className="text-5xl md:text-7xl font-bold mb-4">Find Your Perfect</h1>
             <div className="text-5xl md:text-7xl font-bold gradient-text">
@@ -38,13 +37,11 @@ export function HeroSection() {
             </div>
           </div>
 
-          {/* Subtitle */}
           <p className="text-xl md:text-2xl text-white/80 mb-12 max-w-3xl mx-auto leading-relaxed">
             Discover neighborhoods that match your lifestyle, preferences, and dreams. Our AI-powered platform analyzes
             thousands of data points to find your ideal home.
           </p>
 
-          {/* Feature Cards */}
           <div className="grid md:grid-cols-3 gap-6 mb-12 max-w-4xl mx-auto">
             {features.map((feature, index) => (
               <GlassCard
@@ -60,7 +57,7 @@ export function HeroSection() {
             ))}
           </div>
 
-          {/* CTA Buttons */}
+     
           <div className="flex flex-col sm:flex-row gap-4 justify-center items-center mb-16">
             <AnimatedButton variant="glass" size="lg" className="group">
               <span className="mr-2">Start Your Journey</span>
@@ -72,14 +69,13 @@ export function HeroSection() {
             </AnimatedButton>
           </div>
 
-          {/* Scroll Indicator */}
+        
           <div className="animate-bounce">
             <ArrowDown className="w-6 h-6 mx-auto text-white/60" />
           </div>
         </div>
       </div>
 
-      {/* Background Gradient Orbs */}
       <div className="absolute top-1/4 left-1/4 w-64 h-64 bg-blue-500/20 rounded-full blur-3xl animate-pulse"></div>
       <div className="absolute bottom-1/4 right-1/4 w-64 h-64 bg-purple-500/20 rounded-full blur-3xl animate-pulse delay-1000"></div>
     </section>
