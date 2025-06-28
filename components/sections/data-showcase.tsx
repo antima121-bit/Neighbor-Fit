@@ -20,7 +20,6 @@ export function DataShowcaseSection() {
   })
 
   useEffect(() => {
-    // Simulate real-time metrics
     const interval = setInterval(() => {
       setMetrics((prev) => ({
         totalRequests: prev.totalRequests + Math.floor(Math.random() * 5),
@@ -111,7 +110,6 @@ export function DataShowcaseSection() {
           </p>
         </div>
 
-        {/* Live Metrics Dashboard */}
         <GlassCard className="p-8 mb-12">
           <h3 className="text-2xl font-bold mb-6 text-center gradient-text">Live System Metrics</h3>
           <div className="grid md:grid-cols-4 gap-6">
@@ -134,7 +132,7 @@ export function DataShowcaseSection() {
           </div>
         </GlassCard>
 
-        {/* Data Sources Grid */}
+       
         <div className="grid md:grid-cols-2 gap-6">
           {dataSources.map((source, index) => (
             <GlassCard key={index} className="p-6 hover:scale-105 transition-all duration-300">
@@ -168,7 +166,6 @@ export function DataShowcaseSection() {
                 </div>
               </div>
 
-              {/* Connection Status Indicator */}
               <div className="mt-4 flex items-center space-x-2">
                 <div
                   className={`w-2 h-2 rounded-full ${source.status === "connected" ? "bg-green-400" : source.status === "limited" ? "bg-yellow-400" : "bg-red-400"} animate-pulse`}
@@ -185,7 +182,6 @@ export function DataShowcaseSection() {
           ))}
         </div>
 
-        {/* Algorithm Performance */}
         <GlassCard className="p-8 mt-12">
           <div className="grid md:grid-cols-2 gap-8">
             <div>
